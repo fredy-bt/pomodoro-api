@@ -6,7 +6,7 @@ Built with FastAPI and Python.
 ## Setup
 
 1. Clone the repository  
-git clone `<tu-url>`  
+git clone https://github.com/fredy-bt/pomodoro-api.git  
 dc pomodoro-api
 
 2. Create and active virtual environment  
