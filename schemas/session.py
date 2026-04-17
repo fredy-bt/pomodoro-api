@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from enum import Enum
 from typing import Optional
 from datetime import datetime
+from uuid import UUID
 
 class SessionType(str, Enum):
     pomodoro = 'pomodoro'
@@ -9,13 +10,22 @@ class SessionType(str, Enum):
     long_break = 'long break'
 
 class SessionCreate(BaseModel):
-    task_id: str
+    task_id: Optional[UUID] = None
     session_type: SessionType
     started_at: datetime
     finished_at: datetime
 
 class SessionUpdate(BaseModel):
-    task_id: Optional[str] = None
+    task_id: Optional[UUID] = None
     session_type: Optional[SessionType] = None
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
+
+class SessionResponse(BaseModel):
+    id: UUID
+    task_id: Optional[UUID] = None
+    session_type: SessionType
+    started_at: datetime
+    finished_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

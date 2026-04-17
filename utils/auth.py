@@ -3,8 +3,11 @@ from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from dotenv import load_dotenv
+import os
 
-SECRET_KEY = 'lKaw2pOH7mSqi8'
+load_dotenv()
+SECRET_KEY = os.getenv('SECRET_KEY')
 TOKEN_EXPIRE_MINUTES = 60
 ALGORITHM = 'HS256'
 pwd_context = CryptContext(schemes=['bcrypt'])
@@ -31,3 +34,6 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         return payload
     except:
         raise HTTPException(status_code=403, detail="Invalid or expired token")
+    
+def hash_password(plain: str) -> str:
+    return pwd_context.hash(plain)

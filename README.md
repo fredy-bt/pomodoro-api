@@ -6,7 +6,7 @@ Built with FastAPI and Python.
 ## Setup
 
 1. Clone the repository  
-git clone https://github.com/fredy-bt/pomodoro-api 
+git clone https://github.com/fredy-bt/pomodoro-api/
 dc pomodoro-api
 
 2. Create and active virtual environment  
@@ -51,6 +51,7 @@ in /docs and paste it.
 Query params: from_date, to_date, task_id (optional)  
 
 ### Auth
+<<<<<<< HEAD
 `POST /auth/login/` - get JWT token  
 `POST /auth/register/` - create new user  
 

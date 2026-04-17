@@ -1,88 +1,93 @@
 from fastapi import APIRouter, HTTPException, Depends
-from models.session import sessions_db, Session
-from models.task import tasks_db
-from schemas.session import SessionCreate, SessionUpdate
+from schemas.session import SessionCreate, SessionUpdate, SessionResponse
+from schemas.responses import StandardResponse
 from utils.responses import success_response
 from utils.auth import get_current_user
-import uuid
+from db.db_models import SessionModel, Task
+from db.database import get_db
+from sqlalchemy.orm import Session
+from uuid import UUID
 
 router = APIRouter(prefix='/sessions', tags=["sessions"])
 
-@router.get('/')
-def get_sessions():
-    sessions = [s.to_dict() for s in sessions_db.values()]
-    return success_response(data=sessions)
+@router.get('/', response_model=StandardResponse[list[SessionResponse]])
+def get_sessions(db: Session = Depends(get_db), user = Depends(get_current_user)):
+    sessions = db.query(SessionModel).filter(SessionModel.user_id == user['sub']).all()
+    return success_response(data=[SessionResponse.model_validate(s).model_dump() for s in sessions])
 
-@router.get('/{session_id}')
-def get_session(session_id: str):
-    session = sessions_db.get(session_id, None)
-    if session is None:
+@router.get('/{session_id}', response_model=StandardResponse[SessionResponse])
+def get_session(session_id: UUID, db: Session = Depends(get_db), user = Depends(get_current_user)):
+    db_session = db.query(SessionModel).filter(SessionModel.user_id == user['sub'], SessionModel.id == session_id).first()
+    if db_session is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    return success_response(data=session.to_dict())
+    return success_response(data=SessionResponse.model_validate(db_session).model_dump())
 
-@router.post('/', status_code=201)
-def post_session(create_session: SessionCreate):
-    task = tasks_db.get(create_session.task_id, None)
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    id = str(uuid.uuid4()) 
-
-    new_session = Session(id, create_session.task_id, create_session.session_type, create_session.started_at, create_session.finished_at)
-    sessions_db[id] = new_session
-
-    return success_response(data=new_session.to_dict())
-
-@router.put('/{session_id}')
-def update_session(session_id: str, update: SessionCreate):
-    session = sessions_db.get(session_id, None)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
+@router.post('/', status_code=201, response_model=StandardResponse[SessionResponse])
+def post_session(session: SessionCreate, db: Session = Depends(get_db), user = Depends(get_current_user)):
+    if session.task_id:
+        task = db.query(Task).filter(Task.user_id == user['sub'], Task.id == session.task_id).first()
+        if task is None:
+            raise HTTPException(status_code=404, detail="Task not found")
     
-    task = tasks_db.get(update.task_id, None)
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    new_session = Session(
-        session_id,
-        update.task_id,
-        update.session_type,
-        update.started_at,
-        update.finished_at
+    db_sessions = SessionModel(
+        task_id=session.task_id,
+        user_id=user['sub'],
+        session_type=session.session_type,
+        started_at=session.started_at,
+        finished_at=session.finished_at
     )
+    db.add(db_sessions)
+    db.commit()
+    db.refresh(db_sessions)
 
-    sessions_db[session_id] = new_session
-    return success_response(data=new_session.to_dict())
+    return success_response(data=SessionResponse.model_validate(db_sessions).model_dump())
 
-@router.patch('/{session_id}')
-def patch_session(session_id: str, update: SessionUpdate):
-    session_obj = sessions_db.get(session_id, None)
-    if session_obj is None:
+@router.put('/{session_id}', response_model=StandardResponse[SessionResponse])
+def update_session(session_id: UUID, session_data: SessionCreate, db: Session = Depends(get_db), user = Depends(get_current_user)):
+    db_session = db.query(SessionModel).filter(SessionModel.user_id == user['sub'], SessionModel.id == session_id).first()
+    if db_session is None:
         raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session_data.task_id:
+        task = db.query(Task).filter(Task.user_id == user['sub'], Task.id == session_data.task_id).first()
+        if task is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+    
+    db_session.task_id = session_data.task_id
+    db_session.session_type = session_data.session_type
+    db_session.started_at = session_data.started_at
+    db_session.finished_at = session_data.finished_at
+    db.commit()
+    db.refresh(db_session)
+    
+    return success_response(data=SessionResponse.model_validate(db_session).model_dump())
 
-    patch = update.model_dump(exclude_unset=True)
+@router.patch('/{session_id}', response_model=StandardResponse[SessionResponse])
+def patch_session(session_id: UUID, session_data: SessionUpdate, db: Session = Depends(get_db), user = Depends(get_current_user)):
+    db_session = db.query(SessionModel).filter(SessionModel.user_id == user['sub'], SessionModel.id == session_id).first()
+    if db_session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session_data.task_id:
+        task = db.query(Task).filter(Task.user_id == user['sub'], Task.id == session_data.task_id).first()
+        if task is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+    patch = session_data.model_dump(exclude_unset=True)
     if patch == {}:
         raise HTTPException(status_code=400, detail="No fields provided to patch")
 
-    x = patch.get("task_id", "does_not_exist")
-    if x != "does_not_exist" and x is not None:
-        y = tasks_db.get(x, None)
-        if y is None:
-            raise HTTPException(status_code=404, detail="Task not found")
+    for k, v in patch.items():
+        setattr(db_session, k, v)
+    db.commit()
+    db.refresh(db_session)
 
-    if "task_id" in patch:
-        session_obj.task_id = patch["task_id"]
-    if "session_type" in patch:
-        session_obj.session_type = patch["session_type"]
-    if "started_at" in patch:
-        session_obj.started_at = patch["started_at"]
-    if "finished_at" in patch:
-        session_obj.finished_at = patch["finished_at"]
-
-    sessions_db[session_id] = session_obj
-    return success_response(data=session_obj.to_dict())
+    return success_response(data=SessionResponse.model_validate(db_session).model_dump())
 
 @router.delete('/{session_id}', status_code=204)
-def remove_session(session_id: str, user=Depends(get_current_user)):
-    session = sessions_db.pop(session_id, None)
-    if session is None:
+def remove_session(session_id: UUID, db: Session = Depends(get_db), user = Depends(get_current_user)):
+    db_session = db.query(SessionModel).filter(SessionModel.user_id == user['sub'], SessionModel.id == session_id).first()
+    if db_session is None:
         raise HTTPException(status_code=404, detail="Session not found")
+    db.delete(db_session)
+    db.commit()
