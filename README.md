@@ -6,7 +6,7 @@ Built with FastAPI and Python.
 ## Setup
 
 1. Clone the repository  
-git clone `<tu-url>`  
+git clone https://github.com/fredy-bt/pomodoro-api 
 dc pomodoro-api
 
 2. Create and active virtual environment  
@@ -31,24 +31,28 @@ in /docs and paste it.
 ## Endpoints
 
 ### Tasks
-`GET /tasks/` - list all tasks  
-`GET /tasks/{id}` - get a task  
-`POST /tasks/` - create a task  
-`PUT /tasks/{id}` - replace a task  
-`PATCH /tasks/{id}` - update fields  
+`GET /tasks/` - list all tasks 🔒  
+`GET /tasks/{id}` - get a task 🔒  
+`POST /tasks/` - create a task 🔒  
+`PUT /tasks/{id}` - replace a task 🔒  
+`PATCH /tasks/{id}` - update fields 🔒  
 `DELETE /tasks/{id}` - delete a task 🔒  
 
 ### Sessions
-`GET /sessions/` - list all sessions   
-`GET /sessions/{id}` - get a session  
-`POST /sessions/` - create a session  
-`PUT /sessions/{id}` - replace a session  
-`PATCH /sessions/{id}` - update fields  
+`GET /sessions/` - list all sessions 🔒  
+`GET /sessions/{id}` - get a session 🔒  
+`POST /sessions/` - create a session 🔒  
+`PUT /sessions/{id}` - replace a session 🔒  
+`PATCH /sessions/{id}` - update fields 🔒  
 `DELETE /sessions/{id}` - delete a session 🔒  
 
 ### Stats
-`GET /stats/` - get study statistics  
-Query params: from_date, to_date, task_id (optional)
+`GET /stats/` - get study statistics 🔒  
+Query params: from_date, to_date, task_id (optional)  
 
 ### Auth
-`POST /auth/login/` - get JWT token
+`POST /auth/login/` - get JWT token  
+`POST /auth/register/` - create new user  
+
+### Users
+`GET /users/me/` - get user's profile 🔒  
