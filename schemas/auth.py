@@ -10,13 +10,12 @@ class UserAuth(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
-    token_type: str
+    token_type: str = "bearer"
 
     model_config = ConfigDict(from_attributes=True)
 
 class UserResponse(BaseModel):
     email: str
-    access_token: str
-    token_type: str
+    token: TokenResponse
 
     model_config = ConfigDict(from_attributes=True)

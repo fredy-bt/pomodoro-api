@@ -1,13 +1,15 @@
 from fastapi import APIRouter, HTTPException, Depends
 from schemas.auth import UserAuth, UserCreate, UserResponse, TokenResponse
+from schemas.responses import StandardResponse
 from db.db_models import User
 from db.database import get_db
 from sqlalchemy.orm import Session
 from utils.auth import create_token, verify_password, hash_password
+from utils.responses import success_response
 
 router = APIRouter(prefix='/auth', tags=['auth'])
 
-@router.post('/register', status_code=201, response_model=UserResponse)
+@router.post('/register', status_code=201, response_model=StandardResponse[UserResponse])
 def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
     email = db.query(User).filter(User.email == user_data.email).first()
@@ -24,9 +26,9 @@ def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     token = create_token(str(db_user.id))
 
-    return {"email": db_user.email, "access_token": token, "token_type": "bearer"}
+    return success_response(data={"email": db_user.email, "token": {"access_token": token, "token_type": "bearer"}})
 
-@router.post('/login', response_model=TokenResponse)
+@router.post('/login', response_model=StandardResponse[TokenResponse])
 def login_user(auth_data: UserAuth, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == auth_data.email).first()
     if user is None:
@@ -36,4 +38,4 @@ def login_user(auth_data: UserAuth, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail='Invalid credentials')
     
     token = create_token(str(user.id))
-    return {"access_token": token, "token_type": "bearer"}
+    return success_response(data={"access_token": token})
